@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <wiringPi.h>
+#include "wiringPi.h"
 #include "93Cx6.h"
 
 #define DELAY_CS	0
