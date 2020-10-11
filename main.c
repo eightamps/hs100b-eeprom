@@ -21,7 +21,7 @@
 #define EEPROM_MODEL 46
 #define EEPROM_ORG EEPROM_MODE_16BIT
 #define EEPROM_BITS 16
-#define CMD_PAUSE_US 100
+#define CMD_PAUSE_US 10
 #define HLINE "-------------------------\n"
 
 /**
@@ -141,7 +141,9 @@ void chars_to_words(char *chars, uint16_t *words) {
     if (k == 0) {
       next = chars[0];
       // Process first byte + len as per datasheet.
-      words[0] = chars_to_word(next, len);
+      // chars_to_word(next, len) is confirmed to provide the correct len
+      // to the USB bus.
+      words[0] = chars_to_word(next, (len + 1) * 2);
 
       printf("Chars to words with %02x\n", words[0]);
       printf("Char byte: %x\n", chars[0]);
@@ -388,6 +390,12 @@ void commit_words(uint16_t *words) {
     eeprom_write(&dev, i, words[i]);
     usleep(CMD_PAUSE_US);
   }
+
+  // Disable Erase/Write access on the EEPROM
+  eeprom_ew_disable(&dev);
+  is_enabled = eeprom_is_ew_enabled(&dev);
+  usleep(CMD_PAUSE_US);
+  printf("AFTER EEPROM WRITING, IS ENABLED? %d\n", is_enabled);
 
   read_all(&dev);
 }
