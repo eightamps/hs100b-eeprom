@@ -164,7 +164,7 @@ void chars_to_words(char *chars, uint16_t *words) {
       } else {
         next = chars[i+1];
       }
-      words[k] = chars_to_word(chars[i], next);
+      words[k] = chars_to_word(next, chars[i]);
     }
 
     printf("looping at char index: %d with word index: %d and a: %c and b: %c and entry: 0x%04x\n", i, k, chars[i], next, words[k]);
