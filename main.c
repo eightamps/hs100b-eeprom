@@ -1,3 +1,10 @@
+/**
+ * This utility is intended to take a collection of command line parameters,
+ * format them appropriately and write them to EEPROM, so that a C-Media
+ * HS-100B can later load those values and properly configure itself with the
+ * provided USB descriptors.
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,16 +32,21 @@
 #define HLINE "-------------------------\n"
 
 /**
- * This utility is intended to take a collection of command line parameters,
- * format them appropriately and write them to EEPROM, so that a C-Media
- * HS-100B can later load those values and properly configure itself with the
- * provided USB descriptors.
+ * Container for user-provided values.
  */
+typedef struct hs100_params {
+  uint16_t vendor_id;
+  uint16_t product_id;
+  char *manufacturer; // limited to 30 bytes
+  char *product; // limited to 30 bytes
+  char *serial; // limited to 12 bytes
+} hs100_params;
 
-
-// Assumes little endian
-static void print_bits(char *label, size_t const size, void const * const ptr)
-{
+/**
+ * Print the provided ptr's value in binary to the screen,
+ * with the provided label in front.
+ */
+static void print_bits(char *label, size_t const size, void const * const ptr) {
 		unsigned char *b = (unsigned char*) ptr;
 		unsigned char byte;
 		int i, j;
@@ -105,19 +117,24 @@ void read_all(struct eeprom *dev) {
   dump("16bit:address 0-64", 16, rdata, 64);
 }
 
-typedef struct hs100_params {
-  uint16_t vendor_id;
-  uint16_t product_id;
-  char *manufacturer; // limited to 30 bytes
-  char *product; // limited to 30 bytes
-  char *serial; // limited to 12 bytes
-} hs100_params;
-
 /**
  * Combine the provided chars into a uint16_t word.
  */
 uint16_t chars_to_word(char one, char two) {
   return two | (one << 8);
+}
+
+/**
+ * Pull 2 characters out of the provided double-byte word.
+ *
+ * This is mainly used for debugging concatenation.
+ */
+void words_to_chars(uint16_t *words, char *chars, size_t len) {
+  int cindex = 0;
+  for (int i = 0; i < len; i++) {
+    chars[cindex++] = words[i] >> 8;
+    chars[cindex++] = words[i] & 0x00ff;
+  }
 }
 
 /**
@@ -139,46 +156,25 @@ void chars_to_words(char *chars, uint16_t *words) {
   for (int i = 0; i < len; i+=2) {
     printf("looping with: %d and len: %d\n", i, len);
     if (k == 0) {
-      next = chars[0];
       // Process first byte + len as per datasheet.
       // chars_to_word(next, len) is confirmed to provide the correct len
       // to the USB bus.
+      next = chars[0];
       words[0] = chars_to_word(next, (len + 1) * 2);
-
-      printf("Chars to words with %02x\n", words[0]);
-      printf("Char byte: %x\n", chars[0]);
-      printf("Len  byte: %x | %d\n", len, len);
-     
-      printf("Bits: chars & len\n");
-      print_bits("char: ", 1, &chars[0]);
-      print_bits("len : ", 1, &len);
-
-      printf("Bits: combined\n");
-      print_bits("1st word:    ", 2, &words[0]);
-
       // Decrement i by 1, so that the remaining loop has the 1 entry offset
       // that is needed by the HS100B specified header format.
       i -= 1;
     } else {
-
       if (i + 1 == len) {
         next = '\0';
       } else {
-        next = chars[i+1];
+        next = chars[i + 1];
       }
       words[k] = chars_to_word(next, chars[i]);
     }
 
     printf("looping at char index: %d with word index: %d and a: %c and b: %c and entry: 0x%04x\n", i, k, chars[i], next, words[k]);
     k++;
-  }
-}
-
-void words_to_chars(uint16_t *words, char *chars, size_t len) {
-  int cindex = 0;
-  for (int i = 0; i < len; i++) {
-    chars[cindex++] = words[i] >> 8;
-    chars[cindex++] = words[i] & 0x00ff;
   }
 }
 
@@ -355,6 +351,7 @@ void commit_words(uint16_t *words) {
   char one, two;
   // Apply the words collection to the EEPROM NOW!
   for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
+#ifdef DEBUG
     switch (i) {
       case 0x03:
         print_chars = true;
@@ -376,8 +373,8 @@ void commit_words(uint16_t *words) {
         printf(HLINE);
         printf("AUDIO DEVICE\n");
         break;
-
     }
+
     printf("WORD: 0x%02x 0x%04x %d", i, words[i], i); 
     if (print_chars) {
       one = words[i] & 0xff;
@@ -385,8 +382,8 @@ void commit_words(uint16_t *words) {
       printf(" left: %c, right: %c", one, two);
     }
     printf("\n");
+#endif
 
-    // NOTE(lbayes): UNCOMMENT
     eeprom_write(&dev, i, words[i]);
     usleep(CMD_PAUSE_US);
   }
@@ -400,12 +397,22 @@ void commit_words(uint16_t *words) {
   read_all(&dev);
 }
 
+/**
+ * Initialize all words in the provided collection to the default value that
+ * the EEPROM would set them to.
+ *
+ * This simplifies the write operation so that we can just slam all values
+ * into the EEPROM.
+ */
 void init_words(uint16_t *words) {
   for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
     words[i] = 0xffff;
   }
 }
 
+/**
+ * Print the provided params object to stdout.
+ */
 void print_params(hs100_params *params) {
   printf(HLINE);
   printf("vid hex: 0x%x dec: %d\n", params->vendor_id, params->vendor_id);
@@ -416,6 +423,11 @@ void print_params(hs100_params *params) {
   printf(HLINE);
 }
 
+/**
+ * Utility entry point.
+ *
+ * Allocate memory for the required values, and perform necessary operations.
+ */
 int main(int argc, char *argv[]) {
   hs100_params params = {};
 
