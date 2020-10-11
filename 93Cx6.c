@@ -15,6 +15,12 @@
 
 #define _DEBUG_ 0
 
+static void send_bits(struct eeprom *dev, uint16_t value, int len);
+static void wait_ready(struct eeprom *dev);
+static int getBytesByModel(int bit, int model);
+static int getAddrByModel(int bit, int model);
+static uint16_t getMaskByModel(int bit, int model);
+
 enum OP { // Operations
 	CONTROL		= 0x00, 
 	WRITE 		= 0x01, 

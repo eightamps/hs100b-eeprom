@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <wiringPi.h>
+#include "93Cx6.h"
+#include <unistd.h>
 
 #define pCS	10
 #define pSK	14
@@ -13,10 +16,10 @@
 #define MFR_MAX_LEN 30
 #define PRODUCT_MAX_LEN 30
 #define SERIAL_MAX_LEN 12
-#define EEPROM_ADDR_COUNT 64
-
-// NOTE(lbayes): DELETEME
-#define EEPROM_MODE_16BIT	2
+#define EEPROM_ADDR_COUNT 50
+#define EEPROM_MODEL 46
+#define EEPROM_ORG EEPROM_MODE_16BIT
+#define EEPROM_BITS 16
 
 void dump(char * title, int bits, uint16_t *dt, uint16_t n) {
   int clm = 0;
@@ -50,7 +53,7 @@ void dump(char * title, int bits, uint16_t *dt, uint16_t n) {
 
 void print_words(uint16_t *entries, size_t len) {
   printf("---------------------------\n");
-  printf("LEN: %ld\n", len);
+  printf("LEN: %d\n", len);
   for (int i = 0; i < len; i++) {
     printf("%d : %x \n", i, entries[i]);
   }
@@ -59,6 +62,7 @@ void print_words(uint16_t *entries, size_t len) {
 
 /**
  * Read all bytes on the EEPROM and dump them to output.
+ */
 void read_all(struct eeprom *dev) {
   uint16_t mem_addr;
   uint16_t data;
@@ -72,7 +76,6 @@ void read_all(struct eeprom *dev) {
   }
   dump("16bit:address 0-64", 16, rdata, 64);
 }
-*/
 
 typedef struct hs100_params {
   uint16_t vendor_id;
@@ -127,19 +130,19 @@ void validate_params(char *argv[], hs100_params *params) {
 
   len = strlen(params->manufacturer);
   if (len > MFR_MAX_LEN) {
-    fprintf(stderr, "ERROR: Manfuacturer is too long at [%ld] bytes\n", len);
+    fprintf(stderr, "ERROR: Manfuacturer is too long at [%d] bytes\n", len);
     exit_with_usage(argv);
   }
 
   len = strlen(params->product);
   if (len > PRODUCT_MAX_LEN) {
-    fprintf(stderr, "ERROR: Product is too long at [%ld] bytes\n", len);
+    fprintf(stderr, "ERROR: Product is too long at [%d] bytes\n", len);
     exit_with_usage(argv);
   }
 
   len = strlen(params->serial);
   if (len > SERIAL_MAX_LEN) {
-    fprintf(stderr, "ERROR: Serial is too long at [%ld] bytes\n", len);
+    fprintf(stderr, "ERROR: Serial is too long at [%d] bytes\n", len);
     exit_with_usage(argv);
   }
 }
@@ -222,7 +225,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   // Serial Number
   char_len = strlen(params->serial);
   word_len = (char_len / 2);
-  // printf("LENs: %ld %ld\n", word_len, char_len);
+  // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *serial_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->serial, serial_words); 
   // print_words(serial_words, word_len);
@@ -236,7 +239,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   index = 0x0a;  // Set the index to Product cell.
   char_len = strlen(params->product);
   word_len = (char_len / 2);
-  // printf("LENs: %ld %ld\n", word_len, char_len);
+  // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *product_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->product, product_words); 
   // print_words(product_words, word_len);
@@ -250,7 +253,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   index = 0x1a;  // Set the index to the Manufacturer cell.
   char_len = strlen(params->manufacturer);
   word_len = (char_len / 2);
-  // printf("LENs: %ld %ld\n", word_len, char_len);
+  // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *mfr_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->manufacturer, mfr_words); 
   // print_words(mfr_words, word_len);
@@ -260,12 +263,11 @@ void build_words(uint16_t *words, hs100_params *params) {
   }
 }
 
-void write_all_words(uint16_t *words) {
-  /*
+void commit_words(uint16_t *words) {
   // open device
   struct eeprom dev;
-  int eeprom_bytes = eeprom_open(eeprom_model, eeprom_org, pCS, pSK, pDI, pDO, &dev);
-  printf("EEPROM chip=93C%02d, %dBit Organization, Total=%dWords\n",eeprom_model, bits, eeprom_bytes);
+  int eeprom_bytes = eeprom_open(EEPROM_MODEL, EEPROM_ORG, pCS, pSK, pDI, pDO, &dev);
+  printf("EEPROM chip=93C%02d, %dBit Organization, Total=%dWords\n", EEPROM_MODEL, EEPROM_BITS, eeprom_bytes);
 
   int is_enabled = eeprom_is_ew_enabled(&dev);
   printf("BEFORE EEPROM EW ENABLED? %d\n", is_enabled);
@@ -273,37 +275,37 @@ void write_all_words(uint16_t *words) {
   is_enabled = eeprom_is_ew_enabled(&dev);
   printf("AFTER EEPROM EW ENABLED? %d\n", is_enabled);
 
-  // printf("ERASING ALL\n");
+  printf("ERASING ALL\n");
   eeprom_erase_all(&dev);
 
   // Apply the words collection to the EEPROM NOW!
-  for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
+  for (int i = 0; i < 50; i++) {
     printf("WORD: 0x%02x 0x%04x %d\n", i, words[i], i); 
     eeprom_write(&dev, i, words[i]);
   }
 
-  // printf("WRITING VID / PID\n");
-  // uint16_t vid = 0x335e;
-  // uint16_t pid = 0x8a02;
-  // eeprom_write(&dev, 0x01, vid);
-  // eeprom_write(&dev, 0x02, pid);
+  read_all(&dev);
+}
 
-  // read_all(&dev);
-  // if (eeprom_org == EEPROM_MODE_8BIT) {
-  // printf("EEPROM chip=93C%02d, %dBit Organization, Total=%dBytes\n",eeprom_model, bits, eeprom_bytes);
-  // } else {
-  // }
-  // if (eeprom_org == EEPROM_MODE_16BIT) org16Mode(&dev, eeprom_bytes);
-  */
+void init_words(uint16_t *words) {
+  for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
+    words[i] = 0xffff;
+  }
 }
 
 int main(int argc, char *argv[]) {
-  uint16_t *words = malloc(EEPROM_ADDR_COUNT * sizeof(uint16_t));
+  // start wiringPi
+  if (wiringPiSetup() == -1) {
+    printf("wiringPiSetup Error\n");
+    return 1;
+  }
+
+  // uint16_t *words = malloc(EEPROM_ADDR_COUNT * sizeof(uint16_t));
+  uint16_t words[50] = {};
+  init_words(words);
+
   hs100_params params = {};
   process_args(&params, argc, argv);
-  build_words(words, &params);
-  write_all_words(words);
-
 
   printf("-------------------------\n");
   printf("vid hex: 0x%x dec: %d\n", params.vendor_id, params.vendor_id);
@@ -311,19 +313,10 @@ int main(int argc, char *argv[]) {
   printf("manufacturer: %s\n", params.manufacturer);
   printf("product: %s\n", params.product);
   printf("serial: %s\n", params.serial);
+  printf("-------------------------\n");
 
-  // TODO(lbayes): UNCOMMENT FOLLOWING:
-  // set EEPROM memory size
-  // int eeprom_model = 46;
-  // set EEPROM organization
-  // int eeprom_org = EEPROM_MODE_16BIT;
-  // int bits = 16;
-
-  // start wiringPi
-  // if (wiringPiSetup() == -1) {
-    // printf("wiringPiSetup Error\n");
-    // return 1;
-  // }
+  build_words(words, &params);
+  commit_words(words);
 
   return 0;
 }

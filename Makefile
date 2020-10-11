@@ -1,7 +1,7 @@
 
 
 hs100-eeprom: Dist *.c *.h
-		@cc -Wall -Werror -o Dist/hs100-eeprom main.c
+		@cc -o Dist/hs100-eeprom 93Cx6.c main.c -lwiringPi -DC46 -DWORD
 	
 clean:
 		rm -rf Dist

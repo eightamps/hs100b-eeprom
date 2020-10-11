@@ -35,10 +35,5 @@ void eeprom_erase(struct eeprom *dev, uint16_t addr);
 void eeprom_write_all(struct eeprom *dev, uint16_t value);
 void eeprom_write(struct eeprom *dev, uint16_t addr, uint16_t value);
 uint16_t eeprom_read(struct eeprom *dev, uint16_t addr);
-static void send_bits(struct eeprom *dev, uint16_t value, int len);
-static void wait_ready(struct eeprom *dev);
-static int getBytesByModel(int bit, int model);
-static int getAddrByModel(int bit, int model);
-static uint16_t getMaskByModel(int bit, int model);
 
 #endif
