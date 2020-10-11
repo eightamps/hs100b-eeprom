@@ -13,13 +13,41 @@
 #define pDI	12	// MOSI
 #define pDO	13	// MISO
 
+#define CMEDIA_HEADER 0x6707;
 #define MFR_MAX_LEN 30
 #define PRODUCT_MAX_LEN 30
 #define SERIAL_MAX_LEN 12
-#define EEPROM_ADDR_COUNT 50
+#define EEPROM_ADDR_COUNT 64
 #define EEPROM_MODEL 46
 #define EEPROM_ORG EEPROM_MODE_16BIT
 #define EEPROM_BITS 16
+#define CMD_PAUSE_US 100
+#define HLINE "-------------------------\n"
+
+/**
+ * This utility is intended to take a collection of command line parameters,
+ * format them appropriately and write them to EEPROM, so that a C-Media
+ * HS-100B can later load those values and properly configure itself with the
+ * provided USB descriptors.
+ */
+
+
+// Assumes little endian
+static void print_bits(char *label, size_t const size, void const * const ptr)
+{
+		unsigned char *b = (unsigned char*) ptr;
+		unsigned char byte;
+		int i, j;
+
+  printf("%s :", label);
+		for (i = size-1; i >= 0; i--) {
+				for (j = 7; j >= 0; j--) {
+						byte = (b[i] >> j) & 1;
+						printf("%u", byte);
+				}
+		}
+		puts("");
+}
 
 void dump(char * title, int bits, uint16_t *dt, uint16_t n) {
   int clm = 0;
@@ -52,7 +80,7 @@ void dump(char * title, int bits, uint16_t *dt, uint16_t n) {
 }
 
 void print_words(uint16_t *entries, size_t len) {
-  printf("---------------------------\n");
+  printf(HLINE);
   printf("LEN: %d\n", len);
   for (int i = 0; i < len; i++) {
     printf("%d : %x \n", i, entries[i]);
@@ -93,17 +121,54 @@ uint16_t chars_to_word(char one, char two) {
 }
 
 /**
- * Aggregate the char array into HS100B EEPROM word entries.
+ * Aggregate the char array into HS100B EEPROM formatted word entries.
+ *
+ * This format has a special header, where early versions of the datasheet
+ * indicate that the first byte should be len and followed by the first char,
+ * while a later version of the datasheet indicates that the first byte
+ * should be the first char, followed by the length.
+ *
+ * Could be confusion related to endianness?
  */
 void chars_to_words(char *chars, uint16_t *words) {
   size_t len = strlen(chars);
-  int k;
+  int k = 0;
+  char next;
 
-  printf("-------------------------\n");
+  printf(HLINE);
   for (int i = 0; i < len; i+=2) {
-    k = i / 2;
-    words[k] = chars_to_word(chars[i], chars[i + 1]);
-    printf("looping at index: %d with k: %d and a: %c and b: %c and entry: 0x%x\n", i, k, chars[i], chars[i+1], words[k]);
+    printf("looping with: %d and len: %d\n", i, len);
+    if (k == 0) {
+      next = chars[0];
+      // Process first byte + len as per datasheet.
+      words[0] = chars_to_word(next, len);
+
+      printf("Chars to words with %02x\n", words[0]);
+      printf("Char byte: %x\n", chars[0]);
+      printf("Len  byte: %x | %d\n", len, len);
+     
+      printf("Bits: chars & len\n");
+      print_bits("char: ", 1, &chars[0]);
+      print_bits("len : ", 1, &len);
+
+      printf("Bits: combined\n");
+      print_bits("1st word:    ", 2, &words[0]);
+
+      // Decrement i by 1, so that the remaining loop has the 1 entry offset
+      // that is needed by the HS100B specified header format.
+      i -= 1;
+    } else {
+
+      if (i + 1 == len) {
+        next = '\0';
+      } else {
+        next = chars[i+1];
+      }
+      words[k] = chars_to_word(chars[i], next);
+    }
+
+    printf("looping at char index: %d with word index: %d and a: %c and b: %c and entry: 0x%04x\n", i, k, chars[i], next, words[k]);
+    k++;
   }
 }
 
@@ -129,20 +194,20 @@ void validate_params(char *argv[], hs100_params *params) {
   size_t len;
 
   len = strlen(params->manufacturer);
-  if (len > MFR_MAX_LEN) {
-    fprintf(stderr, "ERROR: Manfuacturer is too long at [%d] bytes\n", len);
+  if (len >= MFR_MAX_LEN) {
+    fprintf(stderr, "ERROR: Manfuacturer is too long at [%d] bytes, should be under [%d] bytes\n", len, MFR_MAX_LEN);
     exit_with_usage(argv);
   }
 
   len = strlen(params->product);
-  if (len > PRODUCT_MAX_LEN) {
-    fprintf(stderr, "ERROR: Product is too long at [%d] bytes\n", len);
+  if (len >= PRODUCT_MAX_LEN) {
+    fprintf(stderr, "ERROR: Product is too long at [%d] bytes, should be under [%d] bytes\n", len, PRODUCT_MAX_LEN);
     exit_with_usage(argv);
   }
 
   len = strlen(params->serial);
-  if (len > SERIAL_MAX_LEN) {
-    fprintf(stderr, "ERROR: Serial is too long at [%d] bytes\n", len);
+  if (len >= SERIAL_MAX_LEN) {
+    fprintf(stderr, "ERROR: Serial is too long at [%d] bytes, should be under [%d] bytes\n", len, SERIAL_MAX_LEN);
     exit_with_usage(argv);
   }
 }
@@ -216,7 +281,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   // The last 4 bits of this value indicate that:
   //   * We should use a serial number.
   //   * We do not adjust/change any audio parameters.
-  words[index++] = 0x6706;
+  words[index++] = CMEDIA_HEADER;
 
   // Vendor and Product IDs
   words[index++] = params->vendor_id;
@@ -224,13 +289,12 @@ void build_words(uint16_t *words, hs100_params *params) {
 
   // Serial Number
   char_len = strlen(params->serial);
-  word_len = (char_len / 2);
+  word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *serial_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->serial, serial_words); 
   // print_words(serial_words, word_len);
-
-  words[index++] = chars_to_word(params->serial[0], char_len);
+  // words[index++] = chars_to_word(params->serial[0], char_len);
   for (int i = 0; i < word_len; i++) {
     words[index++] = serial_words[i];
   }
@@ -238,13 +302,13 @@ void build_words(uint16_t *words, hs100_params *params) {
   // Product
   index = 0x0a;  // Set the index to Product cell.
   char_len = strlen(params->product);
-  word_len = (char_len / 2);
+  word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *product_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->product, product_words); 
   // print_words(product_words, word_len);
 
-  words[index++] = chars_to_word(params->product[0], char_len);
+  // words[index++] = chars_to_word(params->product[0], char_len);
   for (int i = 0; i < word_len; i++) {
     words[index++] = product_words[i];
   }
@@ -252,12 +316,12 @@ void build_words(uint16_t *words, hs100_params *params) {
   // Manufacturer
   index = 0x1a;  // Set the index to the Manufacturer cell.
   char_len = strlen(params->manufacturer);
-  word_len = (char_len / 2);
+  word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *mfr_words = malloc(word_len * sizeof(uint16_t));
   chars_to_words(params->manufacturer, mfr_words); 
   // print_words(mfr_words, word_len);
-  words[index++] = chars_to_word(params->manufacturer[0], char_len);
+  // words[index++] = chars_to_word(params->manufacturer[0], char_len);
   for (int i = 0; i < word_len; i++) {
     words[index++] = mfr_words[i];
   }
@@ -267,21 +331,62 @@ void commit_words(uint16_t *words) {
   // open device
   struct eeprom dev;
   int eeprom_bytes = eeprom_open(EEPROM_MODEL, EEPROM_ORG, pCS, pSK, pDI, pDO, &dev);
+  printf(HLINE);
   printf("EEPROM chip=93C%02d, %dBit Organization, Total=%dWords\n", EEPROM_MODEL, EEPROM_BITS, eeprom_bytes);
 
   int is_enabled = eeprom_is_ew_enabled(&dev);
-  printf("BEFORE EEPROM EW ENABLED? %d\n", is_enabled);
+  printf("BEFORE EEPROM EW (Erase/Write) ENABLED? %d\n", is_enabled);
   eeprom_ew_enable(&dev);
   is_enabled = eeprom_is_ew_enabled(&dev);
-  printf("AFTER EEPROM EW ENABLED? %d\n", is_enabled);
+  usleep(CMD_PAUSE_US);
+  printf("AFTER EEPROM EW (Erase/Write) ENABLED? %d\n", is_enabled);
+
+  printf("READING ALL BEFORE CHANGES\n");
+  read_all(&dev);
+  usleep(CMD_PAUSE_US);
 
   printf("ERASING ALL\n");
   eeprom_erase_all(&dev);
+  usleep(CMD_PAUSE_US);
 
+  bool print_chars = false;
+  char one, two;
   // Apply the words collection to the EEPROM NOW!
-  for (int i = 0; i < 50; i++) {
-    printf("WORD: 0x%02x 0x%04x %d\n", i, words[i], i); 
+  for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
+    switch (i) {
+      case 0x03:
+        print_chars = true;
+        printf(HLINE);
+        printf("SERIAL\n");
+        break;
+      case 0x0a:
+        print_chars = true;
+        printf(HLINE);
+        printf("PRODUCT\n");
+        break;
+      case 0x1a:
+        print_chars = true;
+        printf(HLINE);
+        printf("MANUFACTURER\n");
+        break;
+      case 0x2a:
+        print_chars = false;
+        printf(HLINE);
+        printf("AUDIO DEVICE\n");
+        break;
+
+    }
+    printf("WORD: 0x%02x 0x%04x %d", i, words[i], i); 
+    if (print_chars) {
+      one = words[i] & 0xff;
+      two = words[i] >> 8;
+      printf(" left: %c, right: %c", one, two);
+    }
+    printf("\n");
+
+    // NOTE(lbayes): UNCOMMENT
     eeprom_write(&dev, i, words[i]);
+    usleep(CMD_PAUSE_US);
   }
 
   read_all(&dev);
@@ -293,28 +398,29 @@ void init_words(uint16_t *words) {
   }
 }
 
+void print_params(hs100_params *params) {
+  printf(HLINE);
+  printf("vid hex: 0x%x dec: %d\n", params->vendor_id, params->vendor_id);
+  printf("pid hex: 0x%x dec: %d\n", params->product_id, params->product_id);
+  printf("manufacturer: %s\n", params->manufacturer);
+  printf("product: %s\n", params->product);
+  printf("serial: %s\n", params->serial);
+  printf(HLINE);
+}
+
 int main(int argc, char *argv[]) {
+  hs100_params params = {};
+
   // start wiringPi
   if (wiringPiSetup() == -1) {
     printf("wiringPiSetup Error\n");
-    return 1;
   }
 
   // uint16_t *words = malloc(EEPROM_ADDR_COUNT * sizeof(uint16_t));
-  uint16_t words[50] = {};
+  uint16_t words[64] = {};
   init_words(words);
-
-  hs100_params params = {};
   process_args(&params, argc, argv);
-
-  printf("-------------------------\n");
-  printf("vid hex: 0x%x dec: %d\n", params.vendor_id, params.vendor_id);
-  printf("pid hex: 0x%x dec: %d\n", params.product_id, params.product_id);
-  printf("manufacturer: %s\n", params.manufacturer);
-  printf("product: %s\n", params.product);
-  printf("serial: %s\n", params.serial);
-  printf("-------------------------\n");
-
+  print_params(&params);
   build_words(words, &params);
   commit_words(words);
 

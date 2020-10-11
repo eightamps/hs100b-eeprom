@@ -9,9 +9,9 @@
 #include "93Cx6.h"
 
 #define DELAY_CS	0
-#define DELAY_READ	1
-#define DELAY_WRITE	1
-#define DELAY_WAIT	1
+#define DELAY_READ	0
+#define DELAY_WRITE	0
+#define DELAY_WAIT	0
 
 #define _DEBUG_ 0
 
