@@ -28,7 +28,7 @@
 #define EEPROM_MODEL 46
 #define EEPROM_ORG EEPROM_MODE_16BIT
 #define EEPROM_BITS 16
-#define CMD_PAUSE_US 10
+#define CMD_PAUSE_US 0
 #define HLINE "-------------------------\n"
 
 /**
@@ -109,12 +109,15 @@ void read_all(struct eeprom *dev) {
   uint16_t rdata[128];
   int i;
 
+  printf("READ ALL\n");
+
   memset(rdata, 0, sizeof(rdata));
   for(i=0;i<64;i++) {
     mem_addr = i;
     rdata[i] = eeprom_read(dev, mem_addr);
   }
-  dump("16bit:address 0-64", 16, rdata, 64);
+  print_words(rdata, 64);
+  // dump("16bit:address 0-64", 16, rdata, 64);
 }
 
 /**
@@ -154,7 +157,7 @@ void chars_to_words(char *chars, uint16_t *words) {
 
   printf(HLINE);
   for (int i = 0; i < len; i+=2) {
-    printf("looping with: %d and len: %d\n", i, len);
+    // printf("looping with: %d and len: %d\n", i, len);
     if (k == 0) {
       // Process first byte + len as per datasheet.
       // chars_to_word(next, len) is confirmed to provide the correct len
@@ -173,7 +176,7 @@ void chars_to_words(char *chars, uint16_t *words) {
       words[k] = chars_to_word(next, chars[i]);
     }
 
-    printf("looping at char index: %d with word index: %d and a: %c and b: %c and entry: 0x%04x\n", i, k, chars[i], next, words[k]);
+    // printf("looping at char index: %d with word index: %d and a: %c and b: %c and entry: 0x%04x\n", i, k, chars[i], next, words[k]);
     k++;
   }
 }
@@ -290,7 +293,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *serial_words = malloc(word_len * sizeof(uint16_t));
-  chars_to_words(params->serial, serial_words); 
+  chars_to_words(params->serial, serial_words);
   // print_words(serial_words, word_len);
   // words[index++] = chars_to_word(params->serial[0], char_len);
   for (int i = 0; i < word_len; i++) {
@@ -303,7 +306,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *product_words = malloc(word_len * sizeof(uint16_t));
-  chars_to_words(params->product, product_words); 
+  chars_to_words(params->product, product_words);
   // print_words(product_words, word_len);
 
   // words[index++] = chars_to_word(params->product[0], char_len);
@@ -317,7 +320,7 @@ void build_words(uint16_t *words, hs100_params *params) {
   word_len = (char_len / 2) + 1;
   // printf("LENs: %d %d\n", word_len, char_len);
   uint16_t *mfr_words = malloc(word_len * sizeof(uint16_t));
-  chars_to_words(params->manufacturer, mfr_words); 
+  chars_to_words(params->manufacturer, mfr_words);
   // print_words(mfr_words, word_len);
   // words[index++] = chars_to_word(params->manufacturer[0], char_len);
   for (int i = 0; i < word_len; i++) {
@@ -339,12 +342,12 @@ void commit_words(uint16_t *words) {
   usleep(CMD_PAUSE_US);
   printf("AFTER EEPROM EW (Erase/Write) ENABLED? %d\n", is_enabled);
 
-  printf("READING ALL BEFORE CHANGES\n");
-  read_all(&dev);
-  usleep(CMD_PAUSE_US);
+  // printf("READING ALL BEFORE CHANGES\n");
+  // read_all(&dev);
+  // usleep(CMD_PAUSE_US);
 
-  printf("ERASING ALL\n");
-  eeprom_erase_all(&dev);
+  // printf("ERASING ALL\n");
+  // eeprom_erase_all(&dev);
   usleep(CMD_PAUSE_US);
 
   bool print_chars = false;
@@ -375,7 +378,7 @@ void commit_words(uint16_t *words) {
         break;
     }
 
-    printf("WORD: 0x%02x 0x%04x %d", i, words[i], i); 
+    printf("WORD: 0x%02x 0x%04x %d", i, words[i], i);
     if (print_chars) {
       one = words[i] & 0xff;
       two = words[i] >> 8;
@@ -387,6 +390,8 @@ void commit_words(uint16_t *words) {
     eeprom_write(&dev, i, words[i]);
     usleep(CMD_PAUSE_US);
   }
+
+  printf("Finished writing words\n");
 
   // Disable Erase/Write access on the EEPROM
   eeprom_ew_disable(&dev);
