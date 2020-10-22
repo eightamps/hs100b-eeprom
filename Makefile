@@ -15,8 +15,17 @@ build: Dist/hs100b-eeprom
 clean:
 		rm -rf Dist
 
-# Run
-run: build
+# Telephone EEPROM
+telephone-eeprom: build
+	./Dist/hs100b-eeprom \
+			--vid 0x335e \
+			--pid 0x8a02 \
+			--manufacturer "Eight Amps" \
+			--product "Telephone Audio" \
+			--serial "abcd"
+
+# Microphone EEPROM
+microphone-eeprom: build
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
 			--pid 0x8a02 \
