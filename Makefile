@@ -28,7 +28,7 @@ telephone-eeprom: build
 microphone-eeprom: build
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
-			--pid 0x8a02 \
+			--pid 0x8a03 \
 			--manufacturer "Eight Amps" \
 			--product "Telephone Audio" \
 			--serial "abcd"
