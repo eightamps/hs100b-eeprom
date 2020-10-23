@@ -1,5 +1,7 @@
 
 
+all: build
+
 # Create the output directory
 Dist:
 		mkdir Dist
@@ -22,14 +24,14 @@ telephone-eeprom: build
 			--pid 0x8a02 \
 			--manufacturer "Eight Amps" \
 			--product "Telephone Audio" \
-			--serial "abcd"
+			--serial 0x0001
 
 # Microphone EEPROM
 microphone-eeprom: build
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
-			--pid 0x8a03 \
+			--pid 0x8a04 \
 			--manufacturer "Eight Amps" \
-			--product "Telephone Audio" \
-			--serial "abcd"
+			--product "Microphone Audio" \
+			--serial "efgh"
 

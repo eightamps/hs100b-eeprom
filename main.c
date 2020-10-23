@@ -344,10 +344,10 @@ void commit_words(uint16_t *words) {
 
   // printf("READING ALL BEFORE CHANGES\n");
   // read_all(&dev);
-  // usleep(CMD_PAUSE_US);
+  usleep(CMD_PAUSE_US);
 
-  // printf("ERASING ALL\n");
-  // eeprom_erase_all(&dev);
+  printf("ERASING ALL\n");
+  eeprom_erase_all(&dev);
   usleep(CMD_PAUSE_US);
 
   bool print_chars = false;
