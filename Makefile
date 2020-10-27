@@ -23,8 +23,8 @@ telephone-eeprom: build
 			--vid 0x335e \
 			--pid 0x8a02 \
 			--manufacturer "Eight Amps" \
-			--product "Telephone Audio" \
-			--serial 0x0001
+			--product "ASI Telephone" \
+			--serial "abcd"
 
 # Microphone EEPROM
 microphone-eeprom: build
@@ -32,6 +32,6 @@ microphone-eeprom: build
 			--vid 0x335e \
 			--pid 0x8a04 \
 			--manufacturer "Eight Amps" \
-			--product "Microphone Audio" \
+			--product "ASI Microphone" \
 			--serial "efgh"
 

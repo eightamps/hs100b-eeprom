@@ -147,33 +147,35 @@ void eeprom_write_all(struct eeprom *dev, uint16_t value)
 // Required Clock Cycle : 25-29
 void eeprom_write(struct eeprom *dev, uint16_t addr, uint16_t value)
 {
-	if(!eeprom_is_ew_enabled(dev)) return;
- printf("aye\n");
-	digitalWrite(dev->_pCS, HIGH);
- printf("bee\n");
-	usleep(DELAY_CS);
- printf("cee\n");
-	send_bits(dev, HIGH, 1);
- printf("dee\n");
-	if(dev->_org == EEPROM_MODE_16BIT) {
-   printf("eee\n");
-		send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
-   printf("eff\n");
-		send_bits(dev, 0xFFFF & value, 16);
-   printf("gee\n");
-	} else {
-   printf("ach\n");
-		send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
-   printf("eye\n");
-		send_bits(dev, 0xFF & value, 8);
-   printf("jay\n");
-	}
+  // NOTE(lbayes): These printf statements changed the timing profile so that it
+  // went from working about 80-90% of the time to essentially 100% working.
+  if(!eeprom_is_ew_enabled(dev)) return;
+  printf("");
+  digitalWrite(dev->_pCS, HIGH);
+  printf("");
+  usleep(DELAY_CS);
+  printf("");
+  send_bits(dev, HIGH, 1);
+  printf("");
+  if(dev->_org == EEPROM_MODE_16BIT) {
+    printf("");
+    send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
+    printf("");
+    send_bits(dev, 0xFFFF & value, 16);
+    printf("");
+  } else {
+    printf("");
+    send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
+    printf("");
+    send_bits(dev, 0xFF & value, 8);
+    printf("");
+  }
 
-   printf("kay\n");
-	digitalWrite(dev->_pCS, LOW);
-   printf("ell\n");
-	wait_ready(dev);
-   printf("emm\n");
+  printf("");
+  digitalWrite(dev->_pCS, LOW);
+  printf("");
+  wait_ready(dev);
+  printf("");
 }
 
 // Read Data from Memory
@@ -225,14 +227,14 @@ static void send_bits(struct eeprom *dev, uint16_t value, int len)
 
 static void wait_ready(struct eeprom *dev)
 {
-  printf("enn\n");
+  printf("");
 	//Wait until action is done.
 	digitalWrite(dev->_pCS, HIGH);
-  printf("ohh\n");
+  printf("");
 	while(digitalRead(dev->_pDO) != HIGH) {
 		usleep(DELAY_WAIT);
 	}
-  printf("pee\n");
+  printf("");
 	digitalWrite(dev->_pCS, LOW);
 }
 
