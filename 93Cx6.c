@@ -150,32 +150,32 @@ void eeprom_write(struct eeprom *dev, uint16_t addr, uint16_t value)
   // NOTE(lbayes): These printf statements changed the timing profile so that it
   // went from working about 80-90% of the time to essentially 100% working.
   if(!eeprom_is_ew_enabled(dev)) return;
-  printf("");
+  printf("aye");
   digitalWrite(dev->_pCS, HIGH);
-  printf("");
+  printf("bee");
   usleep(DELAY_CS);
-  printf("");
+  printf("cee");
   send_bits(dev, HIGH, 1);
-  printf("");
+  printf("dee");
   if(dev->_org == EEPROM_MODE_16BIT) {
-    printf("");
+    printf("eee");
     send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
-    printf("");
+    printf("eff");
     send_bits(dev, 0xFFFF & value, 16);
-    printf("");
+    printf("gee");
   } else {
-    printf("");
+    printf("ach");
     send_bits(dev, WRITE<<dev->_addr | (addr & dev->_mask), dev->_addr + 2);
-    printf("");
+    printf("eye");
     send_bits(dev, 0xFF & value, 8);
-    printf("");
+    printf("jay");
   }
 
-  printf("");
+  printf("kay");
   digitalWrite(dev->_pCS, LOW);
-  printf("");
+  printf("ell");
   wait_ready(dev);
-  printf("");
+  printf("emm");
 }
 
 // Read Data from Memory
@@ -227,14 +227,14 @@ static void send_bits(struct eeprom *dev, uint16_t value, int len)
 
 static void wait_ready(struct eeprom *dev)
 {
-  printf("");
+  printf("enn");
 	//Wait until action is done.
 	digitalWrite(dev->_pCS, HIGH);
-  printf("");
+  printf("ohh");
 	while(digitalRead(dev->_pDO) != HIGH) {
 		usleep(DELAY_WAIT);
 	}
-  printf("");
+  printf("pee");
 	digitalWrite(dev->_pCS, LOW);
 }
 
