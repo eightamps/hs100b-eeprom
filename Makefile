@@ -1,6 +1,6 @@
 # Generate serial numbers for devices.
 TIMESTAMP    := ${shell date +'%y%m%d'}
-GIT_HASH     := ${shell cd ../ && git log -1 --pretty=format:"%H" | cut -c1-6}
+GIT_HASH     := ${shell cd ../ && git log -1 --pretty=format:"%H" | cut -c1-4}
 
 PHONE_SERIAL := ${TIMESTAMP}-${GIT_HASH}
 MIC_SERIAL   := ${TIMESTAMP}-${GIT_HASH}
