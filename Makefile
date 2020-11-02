@@ -1,6 +1,17 @@
+# Generate serial numbers for devices.
+TIMESTAMP    := ${shell date +'%y%m%d'}
+GIT_HASH     := ${shell cd ../ && git log -1 --pretty=format:"%H" | cut -c1-6}
 
+PHONE_SERIAL := ${TIMESTAMP}-${GIT_HASH}
+MIC_SERIAL   := ${TIMESTAMP}-${GIT_HASH}
 
 all: build
+
+show:
+	@echo "TIMESTAMP: ${TIMESTAMP}"
+	@echo "GIT_HASH: ${GIT_HASH}"
+	@echo "PHONE_SERIAL: ${PHONE_SERIAL}"
+	@echo "MIC_SERIAL: ${MIC_SERIAL}"
 
 # Create the output directory
 Dist:
@@ -24,7 +35,7 @@ telephone-eeprom: build
 			--pid 0x8a02 \
 			--manufacturer "Eight Amps" \
 			--product "ASI Telephone" \
-			--serial "abcd"
+			--serial "${PHONE_SERIAL}"
 
 # Microphone EEPROM
 microphone-eeprom: build
@@ -33,5 +44,5 @@ microphone-eeprom: build
 			--pid 0x8a04 \
 			--manufacturer "Eight Amps" \
 			--product "ASI Microphone" \
-			--serial "efgh"
+			--serial "${MIC_SERIAL}"
 
