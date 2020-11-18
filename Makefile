@@ -29,7 +29,7 @@ clean:
 		rm -rf Dist
 
 # Telephone EEPROM
-telephone-eeprom: build
+telephone: build
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
 			--pid 0x8a02 \
@@ -38,7 +38,7 @@ telephone-eeprom: build
 			--serial "${PHONE_SERIAL}"
 
 # Microphone EEPROM
-microphone-eeprom: build
+microphone: build
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
 			--pid 0x8a04 \
