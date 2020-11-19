@@ -29,7 +29,8 @@ clean:
 		rm -rf Dist
 
 # Telephone EEPROM
-telephone: build
+tel: build
+	timeout --foreground 10 \
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
 			--pid 0x8a02 \
@@ -38,7 +39,8 @@ telephone: build
 			--serial "${PHONE_SERIAL}"
 
 # Microphone EEPROM
-microphone: build
+mic: build
+	timeout --foreground 10 \
 	./Dist/hs100b-eeprom \
 			--vid 0x335e \
 			--pid 0x8a04 \
