@@ -419,7 +419,7 @@ void commit_words(hs100_params *params, uint16_t *words) {
  */
 void init_words(uint16_t *words) {
   for (int i = 0; i < EEPROM_ADDR_COUNT; i++) {
-    words[i] = 0xffff;
+    words[i] = '\0';
   }
 }
 
