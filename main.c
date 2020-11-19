@@ -15,6 +15,9 @@
 #include "93Cx6.h"
 #include <unistd.h>
 
+// NOTE(lbayes): The PIN NUMBERS IN THIS DOCUMENT ARE MADE UP BULLSHIT FROM
+// wiringPi guy, and do NOT match RPI GPIOs, or RPI PHYSICAL PINs, they're
+// his own nonsense.
 #define pCS	10
 #define pSK	14
 #define pDI	12	// MOSI
@@ -40,6 +43,7 @@ typedef struct hs100_params {
   char *manufacturer; // limited to 30 bytes
   char *product; // limited to 30 bytes
   char *serial; // limited to 12 bytes
+  uint8_t csel;
 } hs100_params;
 
 /**
@@ -217,7 +221,7 @@ void process_args(hs100_params *params, int argc, char *argv[]) {
   int c;
   int option_index = 0;
   int option_count = 0;
-  int required_option_count = 5;
+  int required_option_count = 6;
 
   static struct option long_options[] = {
     {"vid", required_argument, NULL, 'v'},
@@ -225,6 +229,7 @@ void process_args(hs100_params *params, int argc, char *argv[]) {
     {"manufacturer", required_argument, 0, 'm'},
     {"product", required_argument, 0, 'r'},
     {"serial", required_argument, 0, 's'},
+    {"csel", required_argument, NULL, 'c'},
     {0, 0, 0, 0}
   };
 
@@ -252,6 +257,9 @@ void process_args(hs100_params *params, int argc, char *argv[]) {
         break;
       case 's':
         params->serial = optarg;
+        break;
+      case 'c':
+        params->csel = strtol(optarg, NULL, 10);
         break;
       default:
         exit_with_usage(argv);
@@ -328,10 +336,10 @@ void build_words(uint16_t *words, hs100_params *params) {
   }
 }
 
-void commit_words(uint16_t *words) {
+void commit_words(hs100_params *params, uint16_t *words) {
   // open device
   struct eeprom dev;
-  int eeprom_bytes = eeprom_open(EEPROM_MODEL, EEPROM_ORG, pCS, pSK, pDI, pDO, &dev);
+  int eeprom_bytes = eeprom_open(EEPROM_MODEL, EEPROM_ORG, params->csel, pSK, pDI, pDO, &dev);
   printf(HLINE);
   printf("EEPROM chip=93C%02d, %dBit Organization, Total=%dWords\n", EEPROM_MODEL, EEPROM_BITS, eeprom_bytes);
 
@@ -447,7 +455,7 @@ int main(int argc, char *argv[]) {
   process_args(&params, argc, argv);
   print_params(&params);
   build_words(words, &params);
-  commit_words(words);
+  commit_words(&params, words);
 
   return 0;
 }

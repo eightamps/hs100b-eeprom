@@ -36,7 +36,8 @@ tel: build
 			--pid 0x8a02 \
 			--manufacturer "Eight Amps" \
 			--product "ASI Telephone" \
-			--serial "${PHONE_SERIAL}"
+			--serial "${PHONE_SERIAL}" \
+	  --csel 10
 
 # Microphone EEPROM
 mic: build
@@ -46,5 +47,6 @@ mic: build
 			--pid 0x8a04 \
 			--manufacturer "Eight Amps" \
 			--product "ASI Microphone" \
-			--serial "${MIC_SERIAL}"
+			--serial "${MIC_SERIAL}" \
+			--csel 11
 
