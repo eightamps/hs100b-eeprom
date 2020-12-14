@@ -15,38 +15,38 @@ show:
 
 # Create the output directory
 Dist:
-		mkdir Dist
+	mkdir Dist
 
 # Compile the application
 Dist/hs100b-eeprom: Dist *.c *.h
-		cc -o Dist/hs100b-eeprom 93Cx6.c main.c -lwiringPi -DC46 -DWORD -DDEBUG
+	cc -o Dist/hs100b-eeprom 93Cx6.c main.c -lwiringPi -DC46 -DWORD -DDEBUG
 
 # Build
 build: Dist/hs100b-eeprom
 
 # Clean
 clean:
-		rm -rf Dist
+	rm -rf Dist
 
 # Telephone EEPROM
 tel: build
 	timeout --foreground 10 \
 	./Dist/hs100b-eeprom \
-			--vid 0x335e \
-			--pid 0x8a02 \
-			--manufacturer "Eight Amps" \
-			--product "ASI Telephone" \
-			--serial "${PHONE_SERIAL}" \
-	  --csel 10
+		--vid 0x335e \
+		--pid 0x8a02 \
+		--manufacturer "Eight Amps" \
+		--product "ASI Telephone" \
+		--serial "${PHONE_SERIAL}" \
+		--csel 10
 
 # Microphone EEPROM
 mic: build
 	timeout --foreground 10 \
 	./Dist/hs100b-eeprom \
-			--vid 0x335e \
-			--pid 0x8a04 \
-			--manufacturer "Eight Amps" \
-			--product "ASI Microphone" \
-			--serial "${MIC_SERIAL}" \
-			--csel 11
+		--vid 0x335e \
+		--pid 0x8a04 \
+		--manufacturer "Eight Amps" \
+		--product "ASI Microphone" \
+		--serial "${MIC_SERIAL}" \
+		--csel 10
 

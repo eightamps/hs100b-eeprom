@@ -350,13 +350,13 @@ void commit_words(hs100_params *params, uint16_t *words) {
   usleep(CMD_PAUSE_US);
   printf("AFTER EEPROM EW (Erase/Write) ENABLED? %d\n", is_enabled);
 
-  // printf("READING ALL BEFORE CHANGES\n");
-  // read_all(&dev);
+  printf("READING ALL BEFORE CHANGES\n");
+  read_all(&dev);
   usleep(CMD_PAUSE_US);
 
-  printf("ERASING ALL\n");
-  eeprom_erase_all(&dev);
-  usleep(CMD_PAUSE_US);
+  // printf("ERASING ALL\n");
+  // eeprom_erase_all(&dev);
+  // usleep(CMD_PAUSE_US);
 
   bool print_chars = false;
   char one, two;

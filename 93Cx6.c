@@ -8,10 +8,10 @@
 #include "wiringPi.h"
 #include "93Cx6.h"
 
-#define DELAY_CS	0
-#define DELAY_READ	1 // 20
-#define DELAY_WRITE	1 // 20
-#define DELAY_WAIT	1 // 20
+#define DELAY_CS	10
+#define DELAY_READ	20 // 20
+#define DELAY_WRITE	20 // 20
+#define DELAY_WAIT	20 // 20
 
 #define _DEBUG_ 0
 
