@@ -48,5 +48,5 @@ mic: build
 		--manufacturer "Eight Amps" \
 		--product "ASI Microphone" \
 		--serial "${MIC_SERIAL}" \
-		--csel 10
+		--csel 11
 
