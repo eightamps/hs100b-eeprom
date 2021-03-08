@@ -107,11 +107,12 @@ void print_words(uint16_t *entries, size_t len) {
 /**
  * Read all bytes on the EEPROM and dump them to output.
  */
-void read_all(struct eeprom *dev) {
+bool read_all(struct eeprom *dev) {
   uint16_t mem_addr;
   uint16_t data;
   uint16_t rdata[128];
   int i;
+  bool isWritten = false;
 
   printf("READ ALL\n");
 
@@ -119,9 +120,13 @@ void read_all(struct eeprom *dev) {
   for(i=0;i<64;i++) {
     mem_addr = i;
     rdata[i] = eeprom_read(dev, mem_addr);
+    if (rdata[i] != 0xffff) {
+      isWritten = true;
+    }
   }
   print_words(rdata, 64);
   // dump("16bit:address 0-64", 16, rdata, 64);
+  return isWritten;
 }
 
 /**
@@ -407,7 +412,10 @@ void commit_words(hs100_params *params, uint16_t *words) {
   usleep(CMD_PAUSE_US);
   printf("AFTER EEPROM WRITING, IS ENABLED? %d\n", is_enabled);
 
-  read_all(&dev);
+  if (!read_all(&dev)) {
+    printf("WRITE FAILED with EMPTY VALUES\n");
+    exit(1);
+  }
 }
 
 /**
